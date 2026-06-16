@@ -723,16 +723,17 @@
 </div>
 {% endif %}
 <!-- AI Terminal Console -->
+<script>window.ASSISTANT_DISABLED = {{ 'true' if demo_mode else 'false' }};</script>
 <div id="ai-terminal">
   <div id="ai-term-header" onclick="toggleTerminal()">
     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(0,212,255,.6)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-    <span id="ai-term-title">D.A.N.I.E.L · AI Terminal</span>
+    <span id="ai-term-title">D.A.N.I.E.L · AI Terminal{% if demo_mode %} (disabled in demo){% endif %}</span>
     <button id="ai-term-close-btn" onclick="event.stopPropagation();toggleTerminal()">⌄</button>
   </div>
-  <div id="ai-term-body"></div>
+  <div id="ai-term-body">{% if demo_mode %}<div class="term-line term-ai" style="opacity:.9;line-height:1.5"><span class="term-prompt">JARVIS &gt;</span> The AI assistant is disabled on this public demo to avoid exposing the owner's API key/usage. Clone the repo and set your own <code>ANTHROPIC_API_KEY</code> environment variable to activate it.</div>{% endif %}</div>
   <div id="ai-term-input-row">
     <span>&gt;_</span>
-    <input id="ai-term-input" placeholder="ask anything about your portfolio…" autocomplete="off" onkeydown="termKeyDown(event)" />
+    <input id="ai-term-input" placeholder="{% if demo_mode %}AI assistant disabled in demo — add an API key to activate{% else %}ask anything about your portfolio…{% endif %}" autocomplete="off" onkeydown="termKeyDown(event)" {% if demo_mode %}disabled{% endif %} />
   </div>
 </div>
 
@@ -1851,6 +1852,10 @@
     </div>
 
     <div id="lock-error"></div>
+
+    {% if demo_mode %}
+    <div id="lock-demo-hint" style="font-size:11px;opacity:.6;margin:-4px 0 10px;text-align:center">Demo PIN: enter <strong>0000</strong></div>
+    {% endif %}
 
     <div id="lock-numpad">
       <button class="lpad-btn" onclick="padInput('1')">1</button>
@@ -6818,12 +6823,13 @@ function termKeyDown(e) {
 }
 
 async function sendTermMsg() {
-  const inp = document.getElementById('term-input');
+  if (window.ASSISTANT_DISABLED) return;
+  const inp = document.getElementById('ai-term-input');
   if (!inp) return;
   const msg = inp.value.trim();
   if (!msg) return;
   inp.value = '';
-  const log = document.getElementById('term-log');
+  const log = document.getElementById('ai-term-body');
   if (log) {
     log.innerHTML += '<div class="term-line"><span class="term-prompt">YOU &gt;</span> ' + msg + '</div>';
     log.innerHTML += '<div class="term-line term-thinking" id="term-think">JARVIS: <span class="spinner"></span></div>';
