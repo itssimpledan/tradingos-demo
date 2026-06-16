@@ -718,8 +718,7 @@
 <body>
 {% if demo_mode %}
 <div id="demo-banner" style="position:sticky;top:0;z-index:9999;background:linear-gradient(90deg,#00d4ff,#0080ff);color:#001018;font:600 13px/1.4 'JetBrains Mono',monospace;text-align:center;padding:7px 12px;letter-spacing:.02em">
-  🚀 PUBLIC DEMO — fictional portfolio &amp; synthetic market data, not connected to any real account or live feed. AI assistant capped to {{ demo_cap }} messages/day per visitor.
-  &nbsp;<a href="https://github.com/itssimpledan/tradingos-demo" target="_blank" rel="noopener" style="color:#001018;text-decoration:underline;font-weight:700">View source on GitHub</a>
+  🚀 PUBLIC DEMO — fictional portfolio &amp; synthetic market data, not connected to any real account or live feed.
 </div>
 {% endif %}
 <!-- AI Terminal Console -->
@@ -6786,8 +6785,7 @@ function animateCounter(el, endVal, opts) {
   };
 
   window.resetPin = function() {
-    if (!confirm('Reset PIN? You\'ll set a new one on next load.')) return;
-    localStorage.removeItem(PIN_KEY); sessionStorage.removeItem(AUTH_KEY); location.reload();
+    alert('PIN reset is disabled in this public demo — the PIN is shared by every visitor, so changing it isn\'t allowed here.');
   };
 
   const stored = localStorage.getItem(PIN_KEY);
