@@ -6729,7 +6729,7 @@ function animateCounter(el, endVal, opts) {
 
 // ─── PIN Lock Screen ──────────────────────────
 (function initLock() {
-  const PIN_KEY  = 'tradingos_pin';
+  const FIXED_PIN = '0000';
   const AUTH_KEY = 'tradingos_authed';
   let entered = '';
 
@@ -6771,12 +6771,7 @@ function animateCounter(el, endVal, opts) {
     entered += key;
     updateDots();
     if (entered.length === 4) {
-      const stored = localStorage.getItem(PIN_KEY);
-      if (!stored) {
-        localStorage.setItem(PIN_KEY, hashPin(entered));
-        unlock();
-        toast('PIN set! You\'ll use this every session.', 'success');
-      } else if (hashPin(entered) === stored) {
+      if (hashPin(entered) === hashPin(FIXED_PIN)) {
         unlock();
       } else {
         shake(); setError('Incorrect PIN'); entered = ''; updateDots();
@@ -6785,18 +6780,13 @@ function animateCounter(el, endVal, opts) {
   };
 
   window.resetPin = function() {
-    alert('PIN reset is disabled in this public demo — the PIN is shared by every visitor, so changing it isn\'t allowed here.');
+    alert('This public demo uses a fixed PIN (0000) shared by every visitor — there\'s nothing to reset.');
   };
 
-  const stored = localStorage.getItem(PIN_KEY);
   const authed = sessionStorage.getItem(AUTH_KEY);
   const ls = document.getElementById('lock-screen');
   if (!ls) return;
-  if (!stored) {
-    const msg = document.getElementById('lock-msg');
-    if (msg) msg.textContent = 'SET YOUR 4-DIGIT PIN';
-    ls.classList.remove('hidden');
-  } else if (!authed) {
+  if (!authed) {
     ls.classList.remove('hidden');
   }
 
