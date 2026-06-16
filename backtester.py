@@ -294,4 +294,5 @@ def _simulate_trade(strategy, S_entry, S_exit, hv, T, r, otm_pct, multiplier,
         K       = round(S_entry, 0)
         premium = bs_price(S_entry, K, T, r, hv, "call") + bs_price(S_entry, K, T, r, hv, "put")
         loss    = max(0, S_exit - K) + max(0, K - S_exit)
-        pnl     = 
+        pnl     = (premium - loss) * multiplier
+        return {"strategy": "short_straddle", "strike": K, "premium": round(premium, 4), "pnl": round(pnl, 2)}
