@@ -165,6 +165,62 @@ class _DemoFastInfo:
         return getattr(self, key, None)
 
 
+def _synthetic_fundamentals(ticker: str) -> dict:
+    """Deterministic, decent-outcome-skewed fundamentals for a ticker,
+    structured to match real yfinance's financials/balance_sheet/cashflow
+    DataFrames closely enough for app.py's screener route to consume them.
+
+    Tuned so most tickers land in WATCH/STRONG/BEST territory (a believable
+    "decent outcome" showcase) while still leaving some spread/AVOID cases.
+    """
+    rnd = random.Random(_seed_for(ticker) + 101)
+
+    revenue_prior = rnd.uniform(1.5e9, 60e9)
+    growth_pct = rnd.uniform(-4, 22)
+    revenue_recent = revenue_prior * (1 + growth_pct / 100)
+
+    ebit_margin = rnd.uniform(0.12, 0.34)
+    ebit = revenue_recent * ebit_margin
+    ebitda = ebit * rnd.uniform(1.15, 1.40)
+
+    total_assets = revenue_recent * rnd.uniform(0.85, 2.0)
+    current_liabilities = total_assets * rnd.uniform(0.15, 0.32)
+    total_debt = total_assets * rnd.uniform(0.05, 0.30)
+    total_cash = total_assets * rnd.uniform(0.05, 0.22)
+
+    fcf_margin_pct = rnd.uniform(6, 24)
+    fcf = revenue_recent * fcf_margin_pct / 100
+    capex = revenue_recent * rnd.uniform(0.03, 0.08)
+    ocf = fcf + capex
+
+    end = datetime.today()
+    col_recent = pd.Timestamp(end.replace(day=1))
+    col_prior = col_recent - pd.DateOffset(years=1)
+
+    financials_df = pd.DataFrame(
+        {col_recent: [revenue_recent, ebit], col_prior: [revenue_prior, ebit / (1 + growth_pct / 100)]},
+        index=["Total Revenue", "EBIT"],
+    )
+    balance_sheet_df = pd.DataFrame(
+        {col_recent: [total_assets, current_liabilities]},
+        index=["Total Assets", "Current Liabilities"],
+    )
+    cashflow_df = pd.DataFrame(
+        {col_recent: [ocf, -capex]},
+        index=["Operating Cash Flow", "Capital Expenditure"],
+    )
+
+    return {
+        "financials": financials_df,
+        "balance_sheet": balance_sheet_df,
+        "cashflow": cashflow_df,
+        "ebitda": ebitda,
+        "total_debt": total_debt,
+        "total_cash": total_cash,
+        "total_revenue": revenue_recent,
+    }
+
+
 class DemoTicker:
     """Drop-in stand-in for yfinance.Ticker, backed by synthetic data."""
 
@@ -172,6 +228,7 @@ class DemoTicker:
         self.ticker = ticker
         meta = _BASELINE.get(ticker.upper(), {})
         self._df = _synthetic_history(ticker)
+        self._fundamentals = _synthetic_fundamentals(ticker)
         last = float(self._df["Close"].iloc[-1])
         prev = float(self._df["Close"].iloc[-2]) if len(self._df) > 1 else last
         self.info = {
@@ -193,6 +250,10 @@ class DemoTicker:
             "averageVolume": int(self._df["Volume"].tail(30).mean()),
             "currency": "USD",
             "quoteType": "EQUITY",
+            "ebitda": self._fundamentals["ebitda"],
+            "totalDebt": self._fundamentals["total_debt"],
+            "totalCash": self._fundamentals["total_cash"],
+            "totalRevenue": self._fundamentals["total_revenue"],
             "longBusinessSummary": (
                 f"{meta.get('name', ticker.upper())} — demo profile. "
                 "This description and all figures are synthetic sample data "
@@ -208,6 +269,18 @@ class DemoTicker:
     def calendar(self):
         nxt = datetime.today() + timedelta(days=random.Random(_seed_for(self.ticker)).randint(10, 80))
         return {"Earnings Date": [nxt.date()]}
+
+    @property
+    def financials(self):
+        return self._fundamentals["financials"]
+
+    @property
+    def balance_sheet(self):
+        return self._fundamentals["balance_sheet"]
+
+    @property
+    def cashflow(self):
+        return self._fundamentals["cashflow"]
 
     def history(self, period=None, start=None, end=None, **kwargs):
         return _slice_period(self._df, period, start, end).copy()
