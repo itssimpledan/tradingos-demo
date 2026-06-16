@@ -44,6 +44,26 @@ _BASELINE = {
     "LNG":   {"price": 230.00, "name": "Cheniere Energy Inc.",   "sector": "Energy", "industry": "Oil & Gas Midstream"},
 }
 
+# Realistic FX baseline rates (1 unit of FROM -> TO), matching app.py's
+# _FX_FALLBACKS. Without this, a ticker like "USDSGD=X" would otherwise
+# fall through to the generic equity-style random price (15-450), which
+# produced nonsense conversions like "1 USD = 297 SGD" in the demo.
+_FX_BASELINE = {
+    "USDSGD": 1.35, "HKDSGD": 0.173, "GBPSGD": 1.71,
+    "EURSGD": 1.47, "JPYSGD": 0.0090, "AUDSGD": 0.88,
+    "CADSGD": 1.00, "CNYSGD": 0.187, "USDGBP": 0.79,
+    "USDEUR": 0.92, "USDHKD": 7.82,
+}
+
+# Realistic crypto baseline prices (in USD) for "<SYMBOL>-USD" tickers,
+# so refreshing a crypto price in the demo doesn't land on a random
+# equity-range value either.
+_CRYPTO_BASELINE = {
+    "BTC": 67500.0, "ETH": 3550.0, "SOL": 165.0, "XRP": 0.62,
+    "BNB": 590.0, "ADA": 0.45, "DOGE": 0.16, "AVAX": 28.0,
+    "DOT": 6.5, "LINK": 14.5, "LTC": 85.0, "MATIC": 0.55,
+}
+
 DEMO_NOTICE = (
     "Demo mode: this is synthetic sample market data, not a live feed "
     "(the free hosting tier blocks outbound calls to Yahoo Finance)."
@@ -54,9 +74,34 @@ def _seed_for(ticker: str) -> int:
     return int(hashlib.sha256(ticker.upper().encode()).hexdigest(), 16) % (2**32)
 
 
+def _fx_baseline_rate(pair: str) -> float:
+    """Look up (or derive) a realistic rate for an FX pair like 'USDSGD'."""
+    pair = pair.upper()
+    if pair in _FX_BASELINE:
+        return _FX_BASELINE[pair]
+    # Try the inverse pair (e.g. SGDUSD from USDSGD)
+    inverse = pair[3:] + pair[:3]
+    if inverse in _FX_BASELINE:
+        return round(1.0 / _FX_BASELINE[inverse], 6)
+    # Unknown pair — deterministic-but-sane fallback near parity instead
+    # of a random equity-style price.
+    rnd = random.Random(_seed_for(pair))
+    return round(rnd.uniform(0.5, 2.0), 4)
+
+
 def _baseline_price(ticker: str) -> float:
-    if ticker.upper() in _BASELINE:
-        return _BASELINE[ticker.upper()]["price"]
+    t = ticker.upper()
+    if t.endswith("=X"):
+        return _fx_baseline_rate(t[:-2])
+    if t.endswith("-USD") and t[:-4] in _CRYPTO_BASELINE:
+        return _CRYPTO_BASELINE[t[:-4]]
+    if t in _BASELINE:
+        return _BASELINE[t]["price"]
+    if t.endswith("-USD"):
+        # Unknown crypto symbol — keep it in a crypto-ish range rather
+        # than the equity range, deterministic by symbol.
+        rnd = random.Random(_seed_for(ticker))
+        return round(rnd.uniform(0.01, 500), 4)
     rnd = random.Random(_seed_for(ticker))
     return round(rnd.uniform(15, 450), 2)
 
